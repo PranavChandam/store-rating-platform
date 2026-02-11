@@ -5,10 +5,16 @@ const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 
 
-// Create Store (Protected)
+//  Create Store (Protected)
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { name, email, address } = req.body;
+
+    if (!name || !email || !address) {
+      return res.status(400).json({
+        error: "Name, email and address are required",
+      });
+    }
 
     const store = await prisma.store.create({
       data: {
@@ -19,16 +25,21 @@ router.post("/", authMiddleware, async (req, res) => {
       },
     });
 
-    res.json({ message: "Store created ✅", store });
+    res.json({
+      message: "Store created ✅",
+      store,
+    });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Store creation failed" });
+    res.status(500).json({
+      error: "Store creation failed",
+    });
   }
 });
 
 
-// Get All Stores (Public + Avg Rating)
+// Get All Stores 
 router.get("/", async (req, res) => {
   try {
     const stores = await prisma.store.findMany({
@@ -42,7 +53,7 @@ router.get("/", async (req, res) => {
       },
     });
 
-    const storesWithAvg = stores.map(store => {
+    const storesWithStats = stores.map(store => {
       const avg =
         store.ratings.length > 0
           ? store.ratings.reduce((sum, r) => sum + r.value, 0) /
@@ -50,20 +61,31 @@ router.get("/", async (req, res) => {
           : 0;
 
       return {
-        ...store,
+        id: store.id,
+        name: store.name,
+        email: store.email,
+        address: store.address,
+        owner: store.owner,
         averageRating: Number(avg.toFixed(1)),
+        ratingCount: store.ratings.length,
       };
     });
 
-    res.json(storesWithAvg);
+    //  Sort by highest rating
+    storesWithStats.sort((a, b) => b.averageRating - a.averageRating);
+
+    res.json(storesWithStats);
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch stores" });
+    res.status(500).json({
+      error: "Failed to fetch stores",
+    });
   }
 });
 
 
+//  Store Details 
 router.get("/:id", authMiddleware, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -77,7 +99,9 @@ router.get("/:id", authMiddleware, async (req, res) => {
     });
 
     if (!store) {
-      return res.status(404).json({ error: "Store not found" });
+      return res.status(404).json({
+        error: "Store not found",
+      });
     }
 
     const avg =
@@ -93,12 +117,15 @@ router.get("/:id", authMiddleware, async (req, res) => {
     res.json({
       ...store,
       averageRating: Number(avg.toFixed(1)),
+      ratingCount: store.ratings.length,
       userRating: userRating ? userRating.value : null,
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch store" });
+    res.status(500).json({
+      error: "Failed to fetch store",
+    });
   }
 });
 
