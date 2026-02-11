@@ -12,6 +12,9 @@ const authRoutes = require("./routes/auth");
 app.use("/auth", authRoutes);
 const userRoutes = require("./routes/user");
 app.use("/user", userRoutes);
+const storeRoutes = require("./routes/store");
+app.use("/stores", storeRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("API Running");
