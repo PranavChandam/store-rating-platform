@@ -10,6 +10,13 @@ router.post("/", authMiddleware, async (req, res) => {
   try {
     const { storeId, value } = req.body;
 
+    // Validation
+    if (value < 1 || value > 5) {
+      return res.status(400).json({
+        error: "Rating must be between 1 and 5",
+      });
+    }
+
     const rating = await prisma.rating.upsert({
       where: {
         userId_storeId: {
@@ -25,12 +32,16 @@ router.post("/", authMiddleware, async (req, res) => {
       },
     });
 
-    res.json({ message: "Rating submitted ⭐", rating });
+    res.json({
+      message: "Rating submitted ⭐",
+      rating,
+    });
 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Rating failed" });
   }
 });
+
 
 module.exports = router;
