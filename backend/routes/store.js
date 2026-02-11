@@ -5,7 +5,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 
 
-//  Create Store (Protected)
+// Create Store (Protected)
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { name, email, address } = req.body;
@@ -42,7 +42,20 @@ router.post("/", authMiddleware, async (req, res) => {
 // Get All Stores 
 router.get("/", async (req, res) => {
   try {
+    const { search, minRating, page = 1, limit = 5 } = req.query;
+
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(limit);
+
     const stores = await prisma.store.findMany({
+      where: search
+        ? {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          }
+        : {},
       include: {
         owner: {
           select: { id: true, name: true, email: true },
@@ -51,9 +64,11 @@ router.get("/", async (req, res) => {
           select: { value: true },
         },
       },
+      skip: (pageNumber - 1) * pageSize,
+      take: pageSize,
     });
 
-    const storesWithStats = stores.map(store => {
+    let storesWithStats = stores.map(store => {
       const avg =
         store.ratings.length > 0
           ? store.ratings.reduce((sum, r) => sum + r.value, 0) /
@@ -71,10 +86,22 @@ router.get("/", async (req, res) => {
       };
     });
 
-    //  Sort by highest rating
+    //  Filter by minimum rating
+    if (minRating) {
+      storesWithStats = storesWithStats.filter(
+        store => store.averageRating >= parseFloat(minRating)
+      );
+    }
+
+    // Sort highest rated first
     storesWithStats.sort((a, b) => b.averageRating - a.averageRating);
 
-    res.json(storesWithStats);
+    res.json({
+      page: pageNumber,
+      limit: pageSize,
+      total: storesWithStats.length,
+      stores: storesWithStats,
+    });
 
   } catch (err) {
     console.error(err);
