@@ -34,15 +34,33 @@ router.get("/", async (req, res) => {
         owner: {
           select: { id: true, name: true, email: true },
         },
+        ratings: {
+          select: { value: true },
+        },
       },
     });
 
-    res.json(stores);
+    const storesWithAvg = stores.map(store => {
+      const avg =
+        store.ratings.length > 0
+          ? store.ratings.reduce((sum, r) => sum + r.value, 0) /
+            store.ratings.length
+          : 0;
+
+      return {
+        ...store,
+        averageRating: Number(avg.toFixed(1)),
+      };
+    });
+
+    res.json(storesWithAvg);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch stores" });
   }
 });
+
 
 
 //  Store Details
@@ -62,7 +80,17 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Store not found" });
     }
 
-    res.json(store);
+    const avg =
+      store.ratings.length > 0
+        ? store.ratings.reduce((sum, r) => sum + r.value, 0) /
+          store.ratings.length
+        : 0;
+
+    res.json({
+      ...store,
+      averageRating: Number(avg.toFixed(1)),
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch store" });
