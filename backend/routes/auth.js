@@ -1,12 +1,56 @@
 const express = require("express");
+const prisma = require("../prisma");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const prisma = require("../prisma");
+
 const router = express.Router();
 
+
+// Helpers
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,16}$/;
+
+
+//  Signup
 router.post("/signup", async (req, res) => {
   try {
     const { name, email, password, address } = req.body;
+
+    //  Required fields
+    if (!name || !email || !password || !address) {
+      return res.status(400).json({
+        error: "All fields are required",
+      });
+    }
+
+    // ✅ Name validation
+    if (name.length < 20 || name.length > 60) {
+      return res.status(400).json({
+        error: "Name must be 20–60 characters",
+      });
+    }
+
+    //  Email validation
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: "Invalid email format",
+      });
+    }
+
+    // Address validation
+    if (address.length > 400) {
+      return res.status(400).json({
+        error: "Address must be under 400 characters",
+      });
+    }
+
+    // Password validation
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        error:
+          "Password must be 8–16 chars, include uppercase & special char",
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -20,41 +64,16 @@ router.post("/signup", async (req, res) => {
       },
     });
 
-    res.json({ message: "User created", user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Signup failed" });
-  }
-});
-
-router.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await prisma.user.findUnique({
-      where: { email },
+    res.json({
+      message: "User registered ✅",
+      user,
     });
 
-    if (!user) {
-      return res.status(400).json({ error: "User not found" });
-    }
-
-    const valid = await bcrypt.compare(password, user.password);
-
-    if (!valid) {
-      return res.status(400).json({ error: "Invalid password" });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, role: user.role },
-      "secretkey",
-      { expiresIn: "1d" }
-    );
-
-    res.json({ message: "Login success", token });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({
+      error: "Signup failed",
+    });
   }
 });
 
