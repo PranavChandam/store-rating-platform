@@ -156,4 +156,88 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
+//  Update Store (Owner only)
+router.put("/:id", authMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, email, address } = req.body;
+
+    const store = await prisma.store.findUnique({
+      where: { id },
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        error: "Store not found",
+      });
+    }
+
+    // Only owner can update
+    if (store.ownerId !== req.user.id) {
+      return res.status(403).json({
+        error: "Not authorized to update this store",
+      });
+    }
+
+    const updatedStore = await prisma.store.update({
+      where: { id },
+      data: {
+        name: name || store.name,
+        email: email || store.email,
+        address: address || store.address,
+      },
+    });
+
+    res.json({
+      message: "Store updated ✅",
+      store: updatedStore,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Store update failed",
+    });
+  }
+});
+
+// Delete Store (Owner only)
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const store = await prisma.store.findUnique({
+      where: { id },
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        error: "Store not found",
+      });
+    }
+
+    // Only owner can delete
+    if (store.ownerId !== req.user.id) {
+      return res.status(403).json({
+        error: "Not authorized to delete this store",
+      });
+    }
+
+    await prisma.store.delete({
+      where: { id },
+    });
+
+    res.json({
+      message: "Store deleted 🗑",
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Store deletion failed",
+    });
+  }
+});
+
+
 module.exports = router;

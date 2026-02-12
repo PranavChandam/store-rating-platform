@@ -16,7 +16,8 @@ const storeRoutes = require("./routes/store");
 app.use("/stores", storeRoutes);
 const ratingRoutes = require("./routes/ratings");
 app.use("/ratings", ratingRoutes);
-
+const ownerRoutes = require("./routes/owner");
+app.use("/owner", ownerRoutes);
 
 
 app.get("/", (req, res) => {
