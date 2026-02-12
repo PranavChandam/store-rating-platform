@@ -18,6 +18,9 @@ const ratingRoutes = require("./routes/ratings");
 app.use("/ratings", ratingRoutes);
 const ownerRoutes = require("./routes/owner");
 app.use("/owner", ownerRoutes);
+const adminRoutes = require("./routes/admin");
+app.use("/admin", adminRoutes);
+
 
 
 app.get("/", (req, res) => {
