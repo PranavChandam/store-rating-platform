@@ -1,9 +1,13 @@
 const express = require("express");
 const prisma = require("../prisma");
 const authMiddleware = require("../middleware/authMiddleware");
+const bcrypt = require("bcrypt");
 
 const router = express.Router();
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex =
+  /^(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,16}$/;
 
 // Middleware → Admin Only
 const adminOnly = (req, res, next) => {
@@ -14,7 +18,6 @@ const adminOnly = (req, res, next) => {
   }
   next();
 };
-
 
 //  Admin Dashboard Stats
 router.get("/stats", authMiddleware, adminOnly, async (req, res) => {
@@ -36,7 +39,6 @@ router.get("/stats", authMiddleware, adminOnly, async (req, res) => {
     });
   }
 });
-
 
 //  Admin → List Users (WITH FILTERS)
 router.get("/users", authMiddleware, adminOnly, async (req, res) => {
@@ -75,7 +77,7 @@ router.get("/users", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-
+// Admin → List Stores (WITH FILTERS)
 router.get("/stores", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { name, email, address } = req.query;
@@ -126,6 +128,67 @@ router.get("/stores", authMiddleware, adminOnly, async (req, res) => {
     console.error(err);
     res.status(500).json({
       error: "Failed to fetch stores",
+    });
+  }
+});
+
+//  Admin → Create User
+router.post("/users", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { name, email, password, address, role } = req.body;
+
+    if (!name || !email || !password || !address || !role) {
+      return res.status(400).json({
+        error: "All fields are required",
+      });
+    }
+
+    if (name.length < 20 || name.length > 60) {
+      return res.status(400).json({
+        error: "Name must be 20–60 characters",
+      });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: "Invalid email format",
+      });
+    }
+
+    if (address.length > 400) {
+      return res.status(400).json({
+        error: "Address must be under 400 characters",
+      });
+    }
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        error:
+          "Password must be 8–16 chars, include uppercase & special char",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        address,
+        role,
+      },
+    });
+
+    res.json({
+      message: "User created ✅",
+      user,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Failed to create user",
     });
   }
 });

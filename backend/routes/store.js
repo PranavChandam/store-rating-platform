@@ -10,9 +10,31 @@ router.post("/", authMiddleware, async (req, res) => {
   try {
     const { name, email, address } = req.body;
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (!name || !email || !address) {
       return res.status(400).json({
         error: "Name, email and address are required",
+      });
+    }
+
+    // VALIDATION INSIDE ROUTE 👇
+
+    if (name.length < 20 || name.length > 60) {
+      return res.status(400).json({
+        error: "Store name must be 20–60 characters",
+      });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: "Invalid email format",
+      });
+    }
+
+    if (address.length > 400) {
+      return res.status(400).json({
+        error: "Address must be under 400 characters",
       });
     }
 
