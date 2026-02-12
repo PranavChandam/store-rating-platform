@@ -184,6 +184,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
     const id = parseInt(req.params.id);
     const { name, email, address } = req.body;
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     const store = await prisma.store.findUnique({
       where: { id },
     });
@@ -194,10 +196,30 @@ router.put("/:id", authMiddleware, async (req, res) => {
       });
     }
 
-    // Only owner can update
+    //  Only owner
     if (store.ownerId !== req.user.id) {
       return res.status(403).json({
         error: "Not authorized to update this store",
+      });
+    }
+
+    //  VALIDATE ONLY IF FIELD PROVIDED 👇
+
+    if (name && (name.length < 20 || name.length > 60)) {
+      return res.status(400).json({
+        error: "Store name must be 20–60 characters",
+      });
+    }
+
+    if (email && !emailRegex.test(email)) {
+      return res.status(400).json({
+        error: "Invalid email format",
+      });
+    }
+
+    if (address && address.length > 400) {
+      return res.status(400).json({
+        error: "Address must be under 400 characters",
       });
     }
 
@@ -222,6 +244,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
     });
   }
 });
+
 
 // Delete Store (Owner only)
 router.delete("/:id", authMiddleware, async (req, res) => {
